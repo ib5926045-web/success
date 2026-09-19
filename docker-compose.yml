@@ -1,0 +1,47 @@
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-perekup}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-perekup_pass}
+      POSTGRES_DB: ${POSTGRES_DB:-perekup}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-perekup}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build: ./backend
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql+psycopg2://${POSTGRES_USER:-perekup}:${POSTGRES_PASSWORD:-perekup_pass}@db:5432/${POSTGRES_DB:-perekup}
+    depends_on:
+      db:
+        condition: service_healthy
+    expose:
+      - "8000"
+    command: sh -c "alembic upgrade head && python -m app.seed && uvicorn app.main:app --host 0.0.0.0 --port 8000"
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        VITE_API_URL: ${VITE_API_URL:-/api}
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      # Для HTTPS раскомментируйте и положите сертификаты:
+      # - /etc/letsencrypt:/etc/letsencrypt:ro
+
+volumes:
+  pgdata:
