@@ -1,0 +1,16 @@
+__pycache__/
+.pytest_cache/
+*.py[cod]
+.venv/
+venv/
+*.db
+*.sqlite*
+.env
+node_modules/
+dist/
+dist-ssr/
+*.local
+backend/alembic/versions/*.py
+!backend/alembic/versions/.gitkeep
+frontend/dist/
+.DS_Store
